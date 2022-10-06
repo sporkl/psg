@@ -9,6 +9,12 @@ export (float) var flexibility = 5.0
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	randomize()
+	
+	$VBoxContainer/MinDurationHBoxContainer/MinDurationHSlider.value = $PitchRandomizerPlayer.min_duration
+	$VBoxContainer/MaxDurationHBoxContainer/MaxDurationHSlider.value = $PitchRandomizerPlayer.max_duration
+	$VBoxContainer/MinPitchScaleHBoxContainer/MinPitchScaleHSlider.value = $PitchRandomizerPlayer.min_pitch_scale
+	$VBoxContainer/MaxPitchScaleHBoxContainer/MaxPitchScaleHSlider.value = $PitchRandomizerPlayer.max_pitch_scale
+	$VBoxContainer/FlexibiityHBoxContainer/FlexibilityHSlider.value = flexibility
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -24,6 +30,8 @@ func _on_LoadAudioFileButton_pressed():
 
 func _on_FileDialog_file_selected(path):
 	
+	$DebugTextEdit.text += "file selected: " + str(path) + "\n"
+	
 	$VBoxContainer/SongLabel.text = path.get_file()
 	
 	$PitchRandomizerPlayer.stream = load_audio_from_file(path)
@@ -38,10 +46,16 @@ func load_audio_from_file(filepath: String) -> AudioStream:
 	
 	if (err != OK):
 		file.close()
+		$DebugTextEdit.text += "error opening file: " + str(err)
 		return null
 		
 	var data = file.get_buffer(file.get_len())
+	
+	$DebugTextEdit.text += "file data (truncated): " + data.get_string_from_ascii() + "\n"
+	
 	file.close()
+	
+	
 	
 	return load_audio_from_bytes(data, exten)
 
@@ -54,7 +68,15 @@ func load_audio_from_bytes(data: PoolByteArray, exten: String) -> AudioStream:
 		_: return null
 	
 	stream.data = data
-	stream.loop = false
+	
+	if exten == "wav":
+		stream.loop_mode = AudioStreamSample.LOOP_DISABLED
+		stream.format = AudioStreamSample.FORMAT_16_BITS
+		stream.stereo = true
+	else:
+		stream.loop = false
+	
+	$DebugTextEdit.text += "loaded stream: " + str(stream)
 	
 	return stream
 
@@ -64,6 +86,15 @@ func _on_Button_pressed():
 
 func _on_ClickButton_pressed():
 	click_positions.append(position)
+	
+	$PitchRandomizerPlayer.stop()
+	
+	var good_click = false
+	
+	for p in $PitchRandomizerPlayer.get_pitch_scale_1_position():
+		if ((p - flexibility) < position) and (position < (p + flexibility)):
+			good_click = true
+			break
 
 
 func _on_PitchRandomizerPlayer_finished():
@@ -71,7 +102,6 @@ func _on_PitchRandomizerPlayer_finished():
 	var pitch_scale_1_positions = $PitchRandomizerPlayer.get_pitch_scale_1_position().duplicate()
 	var local_click_positions = click_positions.duplicate()
 	
-	print(pitch_scale_1_positions)
 	print(local_click_positions)
 	
 	var num_clicks = local_click_positions.size()
@@ -86,7 +116,6 @@ func _on_PitchRandomizerPlayer_finished():
 			if p - flexibility <= cp and cp <= p + flexibility:
 				num_correct += 1
 				pitch_scale_1_positions.remove(ip)
-				print(pitch_scale_1_positions)
 	
 	if num_clicks == 0:
 		if num_1_positions == 0:
