@@ -20,7 +20,6 @@ var pspsi: int = 0
 var tween
 
 var prev_pitch_scale = pitch_scale
-var psps1 = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -29,6 +28,7 @@ func _ready():
 func prepare_to_play():
 	var current_position: float = 0.0
 	var final_position = stream.get_length()
+	var last_psp_normal = true
 	
 	psps = []
 	pspsi = 0
@@ -37,14 +37,21 @@ func prepare_to_play():
 		
 		var psp = PitchScalePosition.new()
 		psp.duration = rand_range(min_duration, max_duration)
-		psp.pitch_scale = rand_range(min_pitch_scale, max_pitch_scale)
+		
+		if last_psp_normal:
+			psp.pitch_scale = rand_range(min_pitch_scale, max_pitch_scale)
+			last_psp_normal = false
+		else:
+			psp.pitch_scale = 1
+			last_psp_normal = true
 		
 		psps.append(psp)
 		
 		current_position += psp.duration
+	
+	print(psps)
 
 func play(from_position: float = 0.0):
-	psps1 = []
 	stop()
 	if (tween != null): tween.stop()
 	pspsi = 0
@@ -65,30 +72,17 @@ func play_next_adjust_pitch():
 
 func get_pitch_scale_1_position() -> Array:
 	
-	#var psps1 = []
-	#var current_position: float = 0.0
+	var psps1 = []
+	var current_position = 0.0
 	
-	#var pspo = psps[0]
-	#current_position += pspo.duration
-	
-	#for pspn in psps.slice(1, psps.size()):
+	for psp in psps:
 		
-	#	if sign(pspo.pitch_scale - 1) != sign(pspn.pitch_scale - 1):
-			
-	#		var x1 = current_position
-	#		var y1 = pspo.pitch_scale
-	#		var x2 = current_position + pspn.duration
-	#		var y2 = pspn.pitch_scale
-			
-	#		var zero_position = x1 - (((x2 - x1) / (y2 - y1)) * y1)
-			
-	#		psps1.append(zero_position)
+		current_position += psp.duration
+		
+		if (psp.pitch_scale == 1):
+			psps1.append(current_position)
+		
+	
+	print(psps1)
 	
 	return psps1.duplicate()
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	if pitch_scale != prev_pitch_scale:
-		if sign(pitch_scale - 1) != sign(prev_pitch_scale - 1):
-			psps1.append(get_playback_position())
-		prev_pitch_scale = pitch_scale
